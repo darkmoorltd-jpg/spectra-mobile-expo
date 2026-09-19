@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Spectra AI",
+    "slug": "spectra-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "spectra",
+    "splash": {
+      "backgroundColor": "#0A0E17"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.darkmoorltd.spectra"
+    },
+    "android": {
+      "package": "com.darkmoorltd.spectra",
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0E17"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Spectra needs access to your photos to identify minerals.",
+          "cameraPermission": "Spectra needs camera access to identify minerals."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Spectra uses your location to validate mineral findings."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
