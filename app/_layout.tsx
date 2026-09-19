@@ -18,11 +18,16 @@ function InnerLayout() {
           headerTitleStyle: { fontWeight: '800', letterSpacing: 0.5 },
           contentStyle: { backgroundColor: c.bg },
           headerShadowVisible: false,
+          animation: 'fade',
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="splash" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="checkout" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="scan-result" options={{ headerShown: false, presentation: 'modal' }} />
       </Stack>
     </>
   );

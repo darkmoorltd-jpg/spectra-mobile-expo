@@ -1,21 +1,29 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { predictMineral, Prediction } from '../../services/api';
-import { colors } from '../../constants/theme';
+import { router } from 'expo-router';
+import { predictMineral } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { Button } from '../../components/ui';
+import { tapFeedback, playScan } from '../../utils/feedback';
 
 export default function ScanScreen() {
+  const { theme } = useTheme();
+  const c = theme.colors;
+  const { addNotification } = useNotifications();
   const [image, setImage] = useState<string | null>(null);
-  const [result, setResult] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(false);
 
   const pick = async (fromCamera: boolean) => {
+    tapFeedback();
     const perm = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permission needed');
+      Alert.alert('Permission needed', 'Please enable permissions in settings.');
       return;
     }
     const res = fromCamera
@@ -23,13 +31,13 @@ export default function ScanScreen() {
       : await ImagePicker.launchImageLibraryAsync({ quality: 0.85, allowsEditing: false });
     if (!res.canceled && res.assets[0]) {
       setImage(res.assets[0].uri);
-      setResult(null);
     }
   };
 
   const analyze = async () => {
     if (!image) return;
     setLoading(true);
+    playScan();
     try {
       let lat, lon;
       try {
@@ -42,135 +50,110 @@ export default function ScanScreen() {
       } catch {}
 
       const pred = await predictMineral(image, lat, lon);
-      setResult(pred);
+
+      // Push notification
+      addNotification({
+        title: pred.is_unknown ? '⚠️ Unknown Mineral' : `✅ ${pred.display_name}`,
+        body: `Confidence: ${(pred.confidence * 100).toFixed(1)}%`,
+        type: pred.is_unknown ? 'warning' : 'success',
+      });
+
+      // Navigate to result screen
+      router.push({
+        pathname: '/scan-result',
+        params: { result: JSON.stringify(pred) },
+      });
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.detail || e.message || 'Failed');
+      Alert.alert('Error', e?.response?.data?.detail || e.message || 'Failed to analyze');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity style={styles.imageBox} onPress={() => pick(true)}>
+    <ScrollView style={[styles.container, { backgroundColor: c.bg }]} contentContainerStyle={styles.content}>
+      <TouchableOpacity
+        style={[styles.imageBox, { backgroundColor: c.surface, borderColor: c.gold }]}
+        onPress={() => pick(true)}
+      >
         {image ? (
           <Image source={{ uri: image }} style={styles.image} />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={styles.placeholderIcon}>📷</Text>
-            <Text style={styles.placeholderText}>Tap to take a photo</Text>
+            <View style={[styles.cameraCircle, { borderColor: c.gold }]}>
+              <Ionicons name="camera" size={48} color={c.gold} />
+            </View>
+            <Text style={[styles.placeholderText, { color: c.text }]}>Tap to take a photo</Text>
+            <Text style={[styles.placeholderSub, { color: c.textDim }]}>
+              Place mineral on plain background
+            </Text>
           </View>
         )}
       </TouchableOpacity>
 
       <View style={styles.row}>
-        <TouchableOpacity style={[styles.pickBtn, styles.cameraBtn]} onPress={() => pick(true)}>
-          <Text style={styles.pickText}>📷 Camera</Text>
+        <TouchableOpacity
+          style={[styles.pickBtn, { backgroundColor: c.gold }]}
+          onPress={() => pick(true)}
+        >
+          <Ionicons name="camera" size={20} color="#000" />
+          <Text style={styles.pickText}>Camera</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.pickBtn, styles.galleryBtn]} onPress={() => pick(false)}>
-          <Text style={styles.pickText}>🖼️ Gallery</Text>
+        <TouchableOpacity
+          style={[styles.pickBtn, { backgroundColor: c.surface, borderWidth: 1, borderColor: c.gold }]}
+          onPress={() => pick(false)}
+        >
+          <Ionicons name="images" size={20} color={c.gold} />
+          <Text style={[styles.pickText, { color: c.gold }]}>Gallery</Text>
         </TouchableOpacity>
       </View>
 
       {image && (
-        <TouchableOpacity style={styles.analyzeBtn} onPress={analyze} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#000" />
-          ) : (
-            <Text style={styles.analyzeText}>🔍 IDENTIFY MINERAL</Text>
-          )}
-        </TouchableOpacity>
+        <Button
+          title={loading ? 'ANALYZING...' : 'IDENTIFY MINERAL'}
+          icon="🔍"
+          onPress={analyze}
+          disabled={loading}
+          loading={loading}
+          fullWidth
+          size="lg"
+          style={{ marginTop: 16 }}
+        />
       )}
 
-      {result && <ResultCard result={result} />}
+      {image && (
+        <TouchableOpacity
+          onPress={() => setImage(null)}
+          style={styles.clearBtn}
+        >
+          <Text style={{ color: c.textDim, fontSize: 13 }}>Clear photo</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
 
-const ResultCard = ({ result }: { result: Prediction }) => {
-  const isUnknown = result.is_unknown;
-  const color = isUnknown ? colors.red : colors.green;
-
-  return (
-    <View style={[styles.resultCard, { borderColor: color }]}>
-      <Text style={[styles.resultTitle, { color: isUnknown ? colors.red : colors.gold }]}>
-        {isUnknown ? '❓ Unknown Mineral' : `💎 ${result.display_name}`}
-      </Text>
-      <Text style={styles.confidence}>
-        Confidence: {(result.confidence * 100).toFixed(1)}%
-      </Text>
-
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${result.confidence * 100}%`, backgroundColor: color }]} />
-      </View>
-
-      {result.top_3 && (
-        <>
-          <Text style={styles.sectionTitle}>Top 3 predictions</Text>
-          {result.top_3.map((p, i) => (
-            <View key={i} style={styles.predRow}>
-              <Text style={styles.predName}>{p.mineral}</Text>
-              <Text style={styles.predConf}>{(p.confidence * 100).toFixed(0)}%</Text>
-            </View>
-          ))}
-        </>
-      )}
-
-      {result.georoc && (
-        <View style={[styles.geoBox, {
-          backgroundColor: result.georoc.region_match ? '#0A2A0A' : '#2A0A0A',
-          borderColor: result.georoc.region_match ? colors.green : colors.red,
-        }]}>
-          <Text style={styles.geoText}>{result.georoc.message}</Text>
-        </View>
-      )}
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
   content: { padding: 16 },
   imageBox: {
-    height: 300, borderRadius: 16, overflow: 'hidden',
-    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.gold,
+    height: 320, borderRadius: 20, overflow: 'hidden',
+    borderWidth: 2, borderStyle: 'dashed',
   },
   image: { width: '100%', height: '100%' },
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  placeholderIcon: { fontSize: 60 },
-  placeholderText: { color: colors.dim, marginTop: 8 },
+  cameraCircle: {
+    width: 100, height: 100, borderRadius: 50, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+  },
+  placeholderText: { fontSize: 17, fontWeight: '700' },
+  placeholderSub: { fontSize: 13, marginTop: 4 },
   row: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  pickBtn: { flex: 1, padding: 14, borderRadius: 10, alignItems: 'center' },
-  cameraBtn: { backgroundColor: colors.gold },
-  galleryBtn: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.gold },
-  pickText: { color: '#000', fontWeight: 'bold', fontSize: 15 },
-  analyzeBtn: {
-    marginTop: 16, backgroundColor: colors.cyan, padding: 18,
-    borderRadius: 12, alignItems: 'center',
+  pickBtn: {
+    flex: 1, padding: 16, borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 8,
   },
-  analyzeText: { color: '#000', fontWeight: '900', fontSize: 16, letterSpacing: 1 },
-  resultCard: {
-    marginTop: 24, backgroundColor: colors.surface, borderRadius: 16,
-    padding: 20, borderWidth: 2,
-  },
-  resultTitle: { fontSize: 22, fontWeight: 'bold' },
-  confidence: { color: colors.dim, marginTop: 6, fontSize: 14 },
-  progressBar: {
-    height: 8, backgroundColor: colors.border, borderRadius: 4,
-    marginTop: 10, overflow: 'hidden',
-  },
-  progressFill: { height: 8, borderRadius: 4 },
-  sectionTitle: {
-    color: colors.text, fontWeight: 'bold', marginTop: 18, marginBottom: 10,
-  },
-  predRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  predName: { color: colors.text, fontSize: 15 },
-  predConf: { color: colors.gold, fontWeight: 'bold' },
-  geoBox: {
-    marginTop: 16, padding: 12, borderRadius: 10, borderWidth: 1,
-  },
-  geoText: { color: colors.text, fontSize: 13 },
+  pickText: { fontWeight: '700', fontSize: 15, color: '#000' },
+  clearBtn: { alignItems: 'center', marginTop: 16 },
 });
