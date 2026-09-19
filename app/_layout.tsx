@@ -1,24 +1,41 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider } from 'react-native-paper';
-import { colors } from '../constants/theme';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { NotificationProvider } from '../contexts/NotificationContext';
 
-export default function RootLayout() {
+function InnerLayout() {
+  const { theme } = useTheme();
+  const c = theme.colors;
+
   return (
-    <PaperProvider>
-      <StatusBar style="light" />
+    <>
+      <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.surface },
-          headerTintColor: colors.gold,
-          headerTitleStyle: { fontWeight: 'bold' },
-          contentStyle: { backgroundColor: colors.bg },
+          headerStyle: { backgroundColor: c.surface },
+          headerTintColor: c.gold,
+          headerTitleStyle: { fontWeight: '800', letterSpacing: 0.5 },
+          contentStyle: { backgroundColor: c.bg },
+          headerShadowVisible: false,
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </PaperProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <NotificationProvider>
+        <PaperProvider>
+          <InnerLayout />
+        </PaperProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   );
 }
