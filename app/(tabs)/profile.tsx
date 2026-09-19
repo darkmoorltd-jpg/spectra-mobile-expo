@@ -109,6 +109,10 @@ export default function ProfileScreen() {
       {/* SUPPORT */}
       <Text style={[styles.sectionTitle, { color: c.textDim }]}>Support</Text>
       <Card style={{ padding: 0 }}>
+        <SettingRow icon="person-add-outline" label="Refer & Earn" onPress={() => router.push('/referral')} />
+        <SettingRow icon="trophy-outline" label="Badges" onPress={() => router.push('/badges')} />
+        <SettingRow icon="podium-outline" label="Leaderboard" onPress={() => router.push('/leaderboard')} />
+        <SettingRow icon="notifications-outline" label="Price Alerts" onPress={() => router.push('/alerts')} />
         <SettingRow icon="help-circle-outline" label="Help Center" onPress={() => {}} />
         <SettingRow icon="shield-checkmark-outline" label="Privacy Policy" onPress={() => {}} />
         <SettingRow icon="information-circle-outline" label="About" value="v1.0.0" onPress={() => {}} />

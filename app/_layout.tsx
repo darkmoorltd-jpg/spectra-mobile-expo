@@ -28,6 +28,10 @@ function InnerLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="checkout" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="scan-result" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="referral" options={{ headerShown: false }} />
+        <Stack.Screen name="badges" options={{ headerShown: false }} />
+        <Stack.Screen name="leaderboard" options={{ headerShown: false }} />
+        <Stack.Screen name="alerts" options={{ headerShown: false }} />
       </Stack>
     </>
   );
